@@ -1,4 +1,4 @@
-﻿// ===== Data =====
+// ===== Data =====
 function readStorage(key, fallback) {
     try {
         const raw = localStorage.getItem(key);
@@ -354,12 +354,13 @@ function renderList(data) {
 // ===== Render Task List =====
 function renderTaskList() {
     const pending = userTasks.filter(t => !t.done);
-    const done    = userTasks.filter(t => t.done);
+    const done    = userTasks
+        .filter(t => t.done)
+        .sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0));
 
     const taskList = document.getElementById('task-list');
     const doneSection = document.getElementById('done-section');
     const doneList = document.getElementById('done-list');
-    const doneBadge = document.getElementById('done-count-badge');
     taskList.innerHTML = '';
 
     if (pending.length === 0 && done.length === 0) {
@@ -370,7 +371,6 @@ function renderTaskList() {
 
     if (done.length > 0) {
         doneSection.style.display = 'block';
-        doneBadge.innerText = done.length;
         doneList.innerHTML = '';
         done.forEach(task => doneList.appendChild(createTaskCard(task, true)));
         doneList.style.display = doneSectionOpen ? 'flex' : 'none';
@@ -382,11 +382,12 @@ function renderTaskList() {
 
 function renderFilteredTaskList(filteredTasks) {
     const pending = filteredTasks.filter(t => !t.done);
-    const done = filteredTasks.filter(t => t.done);
+    const done = filteredTasks
+        .filter(t => t.done)
+        .sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0));
     const taskList = document.getElementById('task-list');
     const doneSection = document.getElementById('done-section');
     const doneList = document.getElementById('done-list');
-    const doneBadge = document.getElementById('done-count-badge');
 
     taskList.innerHTML = '';
     if (filteredTasks.length === 0) {
@@ -397,7 +398,6 @@ function renderFilteredTaskList(filteredTasks) {
 
     if (done.length > 0) {
         doneSection.style.display = 'block';
-        doneBadge.innerText = done.length;
         doneList.innerHTML = '';
         done.forEach(task => doneList.appendChild(createTaskCard(task, true)));
         doneList.style.display = doneSectionOpen ? 'flex' : 'none';
@@ -504,7 +504,12 @@ function requestCompleteTask(taskId) {
 function confirmCompleteTask() {
     const task = userTasks.find(t => t.id === pendingCompleteTaskId);
     hideModal('complete-confirm-modal');
-    if (task) { task.done = true; saveToStorage(); renderTaskList(); }
+    if (task) {
+        task.done = true;
+        task.completedAt = new Date().toISOString();
+        saveToStorage();
+        renderTaskList();
+    }
     pendingCompleteTaskId = null;
 }
 
@@ -552,6 +557,13 @@ function toggleCurrentTaskDone() {
     const task = userTasks.find(t => t.id === currentEditingTaskId);
     if (!task) return;
     task.done = !task.done;
+
+    if (task.done) {
+        task.completedAt = new Date().toISOString();
+    } else {
+        task.completedAt = null;
+    }
+
     saveToStorage();
     renderTaskList();
 
