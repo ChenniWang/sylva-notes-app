@@ -105,3 +105,7 @@ If I continue developing Sylva, some features I would consider adding include ma
 
 # [Screenshots]
 
+![Notes](./screenshots/notes.png)
+![Tasks](./screenshots/tasks.png)
+![Calendar](./screenshots/calendar.jpg)
+![Customization](./screenshots/customization.png)
