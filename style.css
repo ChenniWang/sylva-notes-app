@@ -1,4 +1,4 @@
-﻿/* ===== CSS Variables & Theme ===== */
+/* ===== CSS Variables & Theme ===== */
 :root {
     --bg: #fdf8ee;
     --surface: #fffcf3;
@@ -403,14 +403,6 @@ body.dark .task-check-circle { background: var(--bg); }
 }
 
 .done-toggle:hover { color: var(--text-sub); }
-
-.done-count-badge {
-    background: var(--border);
-    color: var(--text-muted);
-    font-size: 11px;
-    padding: 1px 7px;
-    border-radius: 20px;
-}
 
 /* ===== Input Bar ===== */
 .input-bar {
