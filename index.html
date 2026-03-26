@@ -1,0 +1,368 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sylva</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&family=ZCOOL+XiaoWei&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-container">
+
+    <div class="header">
+        <div class="header-left">
+            <h1 id="app-title" onclick="goHome()" style="cursor:pointer">🌳 Sylva</h1>
+            <p id="status-text">All Notes</p>
+        </div>
+        <div class="header-actions">
+            <button class="icon-btn" id="search-toggle-btn" onclick="toggleSearch()" title="Search">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button class="icon-btn" id="folders-btn" onclick="toggleFolders()" title="Tags">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </button>
+            <button class="icon-btn" id="calendar-icon" onclick="toggleCalendar()" title="Time">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+            <button class="icon-btn" id="settings-btn" onclick="toggleSettings()" title="Settings">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="search-bar" id="search-bar">
+        <div class="search-inner">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="search-input" placeholder="Search..." oninput="handleSearch(this.value)">
+            <button onclick="clearSearch()">✕</button>
+        </div>
+    </div>
+
+    <div id="page-diary" class="page active">
+        <div class="history-section">
+            <ul id="hole-list"></ul>
+        </div>
+        <div class="input-bar">
+            <textarea id="note-input" placeholder="Write something... Sylva will save it for you..."></textarea>
+            <input type="file" id="image-input" accept="image/*" style="display:none" multiple onchange="handleImageSelect(this)">
+            <button class="img-btn" id="add-image-btn" onclick="document.getElementById('image-input').click()">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+            </button>
+            <button class="send-btn" onclick="saveNote()">Send</button>
+        </div>
+    </div>
+
+    <div id="page-tasks" class="page">
+        <div class="history-section">
+            <ul id="task-list"></ul>
+            <div id="done-section" style="display:none">
+                <button class="done-toggle" onclick="toggleDoneSection()">
+                    <span id="done-toggle-label">▶ Done</span>
+                    <span id="done-count-badge" class="done-count-badge">0</span>
+                </button>
+                <ul id="done-list" style="display:none"></ul>
+            </div>
+        </div>
+        <div class="input-bar">
+            <textarea id="task-input" placeholder="Add a task..."></textarea>
+            <button class="send-btn" onclick="saveTask()">Add</button>
+        </div>
+    </div>
+
+    <nav class="bottom-nav" id="bottom-nav">
+        <button class="nav-btn active" id="nav-diary" onclick="switchPage('diary')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span>Notes</span>
+        </button>
+        <button class="nav-btn" id="nav-tasks" onclick="switchPage('tasks')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9,11 12,14 22,4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span>Tasks</span>
+        </button>
+    </nav>
+</div>
+
+<div id="calendar-modal" class="modal" onclick="toggleCalendar()">
+    <div class="timeless-shell" onclick="event.stopPropagation()">
+        <button class="modal-corner-close close-button" onclick="toggleCalendar()">✕</button>
+        <div class="deck-nav">
+            <button class="deck-dot active" id="dot-0" onclick="goToCard(0)"></button>
+            <button class="deck-dot" id="dot-1" onclick="goToCard(1)"></button>
+            <button class="deck-dot" id="dot-2" onclick="goToCard(2)"></button>
+            <button class="deck-dot" id="dot-3" onclick="goToCard(3)"></button>
+        </div>
+        <div class="deck-track" id="deck-track">
+            <div class="deck-card" id="card-0">
+                <div class="deck-card-header">
+                    <span class="deck-card-num">01</span>
+                    <span class="deck-card-title">View Calendar</span>
+                </div>
+                <div class="calendar-header">
+                    <button onclick="changeMonth(-1)">‹</button>
+                    <div id="current-month-year"></div>
+                    <button onclick="changeMonth(1)">›</button>
+                </div>
+                <div class="weekdays"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+                <div id="calendar-days" class="days-grid"></div>
+                <button class="clear-filter" style="margin-top:12px" onclick="showAll(); toggleCalendar()">Show All Notes</button>
+            </div>
+
+            <div class="deck-card" id="card-1">
+                <div class="deck-card-header">
+                    <span class="deck-card-num">02</span>
+                    <span class="deck-card-title">On This Day</span>
+                </div>
+                <div class="memory-head">
+                    <p class="memory-subtitle" id="memory-date-label"></p>
+                </div>
+                <div id="memory-list" class="memory-list"></div>
+            </div>
+
+            <div class="deck-card" id="card-2">
+                <div class="deck-card-header">
+                    <span class="deck-card-num">03</span>
+                    <span class="deck-card-title">Random Memory</span>
+                </div>
+                <div id="random-note-display" class="random-note-display">
+                    <div class="random-empty">
+                        <div style="font-size:48px;margin-bottom:12px">🎲</div>
+                        <p>Click the button below to draw a random note</p>
+                    </div>
+                </div>
+                <button class="clear-filter" id="random-draw-btn" style="margin-top:12px" onclick="drawRandomNote()">🎲 Draw</button>
+            </div>
+
+            <div class="deck-card" id="card-3">
+                <div class="deck-card-header">
+                    <span class="deck-card-num">04</span>
+                    <span class="deck-card-title">Statistics</span>
+                </div>
+                <div id="stats-panel" class="stats-panel">
+                    <div class="empty-state">
+                        <div class="emoji">📊</div>
+                        <p>Preparing statistics...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="folders-modal" class="modal" onclick="toggleFolders()">
+    <div class="folders-card" onclick="event.stopPropagation()">
+        <div class="folders-header">
+            <span>📁 Tags</span>
+            <button class="close-btn close-button" onclick="toggleFolders()">✕</button>
+        </div>
+        <div id="folders-list"></div>
+        <button class="clear-filter" style="margin-top:15px" onclick="showAll(); toggleFolders()">Show All Notes</button>
+        <div class="folders-manage">
+            <button class="manage-tags-btn" onclick="toggleFolders(); openTagManager()">Manage Tags</button>
+        </div>
+    </div>
+</div>
+
+<div id="details-modal" class="modal" onclick="closeModal()">
+    <div class="modal-wrapper" onclick="event.stopPropagation()">
+        <button class="close-button" onclick="closeModal()">✕</button>
+        <div class="modal-content">
+            <div class="modal-tag-strip" id="modal-tag-strip"></div>
+            <div id="view-mode">
+                <p id="modal-text"></p>
+                <div id="modal-image-container"></div>
+                <div class="modal-footer">
+                        <div class="modal-footer-left">
+                        <button class="mini-delete-btn" onclick="deleteCurrentNote()">Delete</button>
+                        <button class="edit-btn" onclick="enterEditMode()">Edit</button>
+                        <button class="tag-btn" onclick="openTagPicker()">Tags</button>
+                        <button class="archive-btn" id="modal-archive-btn" onclick="archiveCurrentNote()">Archive</button>
+                    </div>
+                    <div id="modal-time" class="modal-time"></div>
+                </div>
+            </div>
+            <div id="edit-mode" style="display:none">
+                <textarea id="edit-textarea"></textarea>
+                <div id="edit-image-sorter" class="edit-image-sorter" style="display:none">
+                    <div class="edit-image-sorter-head">
+                        <span>Image Order</span>
+                        <span class="edit-image-sorter-sub">Use buttons to change image order</span>
+                    </div>
+                    <div id="edit-image-list" class="edit-image-list"></div>
+                </div>
+                <div class="edit-actions">
+                    <button class="cancel-btn" onclick="cancelEdit()">Cancel</button>
+                    <button class="save-edit-btn" onclick="saveEdit()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="task-detail-modal" class="modal" onclick="closeTaskDetail()">
+    <div class="modal-wrapper" onclick="event.stopPropagation()">
+        <button class="close-button" onclick="closeTaskDetail()">✕</button>
+        <div class="modal-content">
+            <div class="modal-tag-strip" id="task-modal-tag-strip"></div>
+            <div id="task-view-mode">
+                <p id="task-modal-title" class="task-modal-title-text"></p>
+                <p id="task-modal-note" class="task-modal-note-text"></p>
+                <div class="modal-footer">
+                        <div class="modal-footer-left">
+                        <button class="mini-delete-btn" onclick="deleteCurrentTask()">Delete</button>
+                        <button class="edit-btn" onclick="enterTaskEditMode()">Edit</button>
+                        <button class="tag-btn" onclick="openTaskTagPicker()">Tags</button>
+                        <button class="archive-btn" id="task-restore-btn" onclick="toggleCurrentTaskDone()">Restore</button>
+                    </div>
+                    <div id="task-modal-time" class="modal-time"></div>
+                </div>
+            </div>
+            <div id="task-edit-mode" style="display:none">
+                <input id="task-edit-title" type="text" class="task-edit-title-input" placeholder="Task title">
+                <textarea id="task-edit-note" class="task-edit-note-input" placeholder="Notes (optional)..."></textarea>
+                <div class="edit-actions">
+                    <button class="cancel-btn" onclick="cancelTaskEdit()">Cancel</button>
+                    <button class="save-edit-btn" onclick="saveTaskEdit()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="tag-picker-modal" class="modal" onclick="closeTagPicker()">
+    <div class="tag-picker-card" onclick="event.stopPropagation()">
+        <div class="folders-header">
+            <span>🏷 Select Tag</span>
+            <button class="close-btn close-button" onclick="closeTagPicker()">✕</button>
+        </div>
+        <div id="tag-picker-list"></div>
+        <button class="manage-tags-btn" style="margin-top:15px;width:100%" onclick="closeTagPicker(); openTagManager()">Manage Tags</button>
+    </div>
+</div>
+
+<div id="tag-manager-modal" class="modal" onclick="closeTagManager()">
+    <div class="tag-manager-card" onclick="event.stopPropagation()">
+        <div class="folders-header">
+            <span>Manage Tags</span>
+            <button class="close-btn close-button" onclick="closeTagManager()">✕</button>
+        </div>
+        <div id="existing-tags-list"></div>
+        <div class="new-tag-form">
+            <p class="form-label">New Tag</p>
+            <input type="text" id="new-tag-name" placeholder="Tag name" maxlength="10">
+            <div class="color-swatches" id="color-swatches"></div>
+            <button class="save-edit-btn" style="width:100%;margin-top:10px" onclick="createNewTag()">Create</button>
+        </div>
+    </div>
+</div>
+
+<div id="settings-modal" class="modal" onclick="toggleSettings()">
+    <div class="settings-card" onclick="event.stopPropagation()">
+        <div class="folders-header">
+            <span>Settings</span>
+            <button class="close-btn close-button" onclick="toggleSettings()">✕</button>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label"><span class="settings-icon">🌙</span><span>Dark mode</span></div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="dark-mode-toggle" onchange="toggleDarkMode(this.checked)">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div class="settings-section">
+            <p class="settings-section-title">Theme color</p>
+            <div class="theme-color-row">
+                <input type="color" id="theme-color-picker" value="#c9a84c" oninput="applyThemeColor(this.value)" title="Custom color">
+                <div class="preset-colors" id="preset-theme-colors">
+                    <div class="preset-color-dot active" data-color="#c9a84c" style="background:#c9a84c" onclick="applyThemeColor('#c9a84c'); document.getElementById('theme-color-picker').value='#c9a84c';"></div>
+                    <div class="preset-color-dot" data-color="#c98f7c" style="background:#c98f7c" onclick="applyThemeColor('#c98f7c'); document.getElementById('theme-color-picker').value='#c98f7c';"></div>
+                    <div class="preset-color-dot" data-color="#6dab7f" style="background:#6dab7f" onclick="applyThemeColor('#6dab7f'); document.getElementById('theme-color-picker').value='#6dab7f';"></div>
+                    <div class="preset-color-dot" data-color="#4f86cf" style="background:#4f86cf" onclick="applyThemeColor('#4f86cf'); document.getElementById('theme-color-picker').value='#4f86cf';"></div>
+                    <div class="preset-color-dot" data-color="#a07cbf" style="background:#a07cbf" onclick="applyThemeColor('#a07cbf'); document.getElementById('theme-color-picker').value='#a07cbf';"></div>
+                    <div class="preset-color-dot" data-color="#c97891" style="background:#c97891" onclick="applyThemeColor('#c97891'); document.getElementById('theme-color-picker').value='#c97891';"></div>
+                </div>
+            </div>
+        </div>
+        <div class="settings-section">
+            <p class="settings-section-title">Font style</p>
+            <div class="font-options" id="font-options">
+                <button class="font-opt active" data-font="serif" onclick="applyFont('serif')"><span>Serif</span><span class="font-preview">Noto Serif SC</span></button>
+                <button class="font-opt" data-font="round" onclick="applyFont('round')" style="font-family:'ZCOOL XiaoWei'"><span>Rounded</span><span class="font-preview">ZCOOL XiaoWei</span></button>
+                <button class="font-opt" data-font="kai" onclick="applyFont('kai')" style="font-family:'ZCOOL KuaiLe'"><span>Handwritten</span><span class="font-preview">ZCOOL KuaiLe</span></button>
+                <button class="font-opt" data-font="system" onclick="applyFont('system')"><span>System</span><span class="font-preview">PingFang / SF</span></button>
+            </div>
+        </div>
+        <div class="settings-section">
+            <p class="settings-section-title">Display preference</p>
+            <div class="display-options">
+                <button class="display-opt active" data-val="both" onclick="setDisplayPref('both')">Show All</button>
+                <button class="display-opt" data-val="diary" onclick="setDisplayPref('diary')">Notes Only</button>
+                <button class="display-opt" data-val="tasks" onclick="setDisplayPref('tasks')">Tasks Only</button>
+            </div>
+        </div>
+        <div class="settings-section">
+            <p class="settings-section-title">Export data</p>
+            <div class="export-btns">
+                <div class="export-row">
+                    <button class="export-btn" onclick="exportTxt()">
+                        <span class="export-icon">📄</span>
+                        <div><span class="export-label">Export .txt</span><span class="export-sub">Plain text, readable</span></div>
+                    </button>
+                    <button class="export-btn" onclick="exportJson()">
+                        <span class="export-icon">🗂</span>
+                        <div><span class="export-label">Export .json</span><span class="export-sub">Full backup, restorable</span></div>
+                    </button>
+                </div>
+                <button class="export-btn" onclick="promptImportJson()">
+                    <span class="export-icon">📥</span>
+                    <div><span class="export-label">Import .json</span><span class="export-sub">Restore from a backup</span></div>
+                </button>
+                <button class="export-btn" onclick="openGuideModal(true)">
+                    <span class="export-icon">🧭</span>
+                    <div><span class="export-label">Show guide</span><span class="export-sub">Reopen onboarding</span></div>
+                </button>
+            </div>
+            <input type="file" id="import-json-input" accept=".json,application/json" style="display:none" onchange="handleImportFile(this)">
+            <p class="storage-note">Data is stored locally in this browser only. Clearing browser data, switching browsers, or changing devices may cause data loss. Images can use significant local space; export backups regularly.</p>
+        </div>
+    </div>
+</div>
+
+<div id="guide-modal" class="modal" onclick="closeGuideModal()">
+    <div class="guide-card" onclick="event.stopPropagation()">
+        <div class="folders-header">
+            <span>Welcome to Sylva</span>
+            <button class="close-btn close-button" onclick="closeGuideModal()">✕</button>
+        </div>
+        <p class="guide-title">A simple notebook that combines notes and tasks.</p>
+        <p class="guide-note">Your data is stored locally in this browser only. It is private but may be lost if you clear browser data or switch devices. Export backups regularly.</p>
+        <div class="guide-list">
+            <div class="guide-item"><strong>Top-left Sylva</strong><span>Return home and show all notes</span></div>
+            <div class="guide-item"><strong>Search</strong><span>Find note content</span></div>
+            <div class="guide-item"><strong>Folders</strong><span>View tags and archive</span></div>
+            <div class="guide-item"><strong>Time</strong><span>View calendar, on-this-day, random note, and stats</span></div>
+            <div class="guide-item"><strong>Settings</strong><span>Change theme, font, import/export backups</span></div>
+            <div class="guide-item"><strong>Quick send</strong><span>Press Ctrl + Enter to send on desktop</span></div>
+        </div>
+        <div class="guide-actions">
+            <button class="cancel-btn" onclick="closeGuideModal()">Got it</button>
+        </div>
+    </div>
+</div>
+
+<div id="complete-confirm-modal" class="modal" onclick="cancelCompleteTask()">
+    <div class="confirm-card" onclick="event.stopPropagation()">
+        <button class="modal-corner-close close-button confirm-close" onclick="cancelCompleteTask()">✕</button>
+        <div class="confirm-emoji">✓</div>
+        <p class="confirm-title">Mark as completed?</p>
+        <p class="confirm-sub" id="confirm-task-name"></p>
+        <div class="confirm-actions">
+            <button class="cancel-btn" onclick="cancelCompleteTask()">Cancel</button>
+            <button class="save-edit-btn" onclick="confirmCompleteTask()">Complete</button>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
