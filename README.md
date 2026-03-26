@@ -6,7 +6,8 @@ Instead of focusing only on basic note-taking, I wanted the app to feel a little
 
 Because everything runs on the user side, Sylva does not require an account, a database, or a backend server. It can be opened directly in the browser and stores data locally using `localStorage`.
 
-
+# [Demo]
+https://chenniwang.github.io/sylva-notes-app/
 
 # [What It Does?]
 Sylva combines a few related tools in one interface:
