@@ -52,7 +52,9 @@ body {
 .app-container {
     width: 100%;
     max-width: 500px;
+    min-height: 100vh;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     position: relative;
@@ -158,6 +160,8 @@ body {
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    min-height: 0;
+    padding-bottom: var(--nav-h);
 }
 
 .page.active { display: flex; }
@@ -166,9 +170,9 @@ body {
 .history-section {
     flex: 1;
     overflow-y: auto;
-    /* Extra bottom padding keeps the last card fully visible above the input bar. */
-    padding: 16px 16px 148px 16px; 
+    padding: 16px;
     position: relative;
+    min-height: 0;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch; /* Smoother scrolling on mobile devices. */
 }
@@ -406,9 +410,11 @@ body.dark .task-check-circle { background: var(--bg); }
 
 /* ===== Input Bar ===== */
 .input-bar {
-    position: absolute;
-    bottom: var(--nav-h);
+    position: relative;
     width: 100%;
+    margin-top: auto;
+    flex-shrink: 0;
+    z-index: 5;
     background: var(--surface);
     padding: 10px 14px;
     display: flex;
