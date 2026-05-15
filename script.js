@@ -193,6 +193,8 @@ window.onload = () => {
         renderFontOptions();
         applyDisplayPref(appSettings.display);
         bindInputShortcuts();
+        syncCalendarDayNavUi();
+        initDiaryDateSwipe();
         if (!appSettings.guideSeen) {
             setTimeout(() => openGuideModal(), 220);
         }
@@ -203,6 +205,78 @@ bindInputShortcuts();
 
 // ===== Page Navigation =====
 let currentPage = 'diary';
+/** When set, main list shows notes for this calendar day (yyyy-mm-dd). */
+let activeCalendarDayFilter = null;
+
+function clearCalendarDayFilter() {
+    activeCalendarDayFilter = null;
+    syncCalendarDayNavUi();
+}
+
+function syncCalendarDayNavUi() {
+    const prev = document.getElementById('calendar-day-prev');
+    const next = document.getElementById('calendar-day-next');
+    const show = currentPage === 'diary' && activeCalendarDayFilter !== null;
+    if (prev) prev.style.display = show ? 'flex' : 'none';
+    if (next) next.style.display = show ? 'flex' : 'none';
+    const diary = document.getElementById('page-diary');
+    if (diary) diary.classList.toggle('date-filter-active', !!show);
+}
+
+let diarySwipeSuppressClickUntil = 0;
+
+function initDiaryDateSwipe() {
+    const zone = document.querySelector('#page-diary .history-section');
+    if (!zone || zone._diaryDaySwipeInit) return;
+    zone._diaryDaySwipeInit = true;
+
+    const MIN = 72;
+    const RATIO = 1.35;
+    let sx = 0;
+    let sy = 0;
+    let tracking = false;
+
+    zone.addEventListener('touchstart', e => {
+        if (!activeCalendarDayFilter || currentPage !== 'diary') return;
+        const t = e.touches[0];
+        sx = t.clientX;
+        sy = t.clientY;
+        tracking = true;
+    }, { passive: true });
+
+    zone.addEventListener('touchend', e => {
+        if (!tracking) return;
+        tracking = false;
+        if (!activeCalendarDayFilter || currentPage !== 'diary') return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - sx;
+        const dy = t.clientY - sy;
+        if (Math.abs(dx) < MIN || Math.abs(dx) < Math.abs(dy) * RATIO) return;
+        if (dx > 0) shiftFilteredCalendarDay(1);
+        else shiftFilteredCalendarDay(-1);
+        diarySwipeSuppressClickUntil = Date.now() + 450;
+        e.preventDefault();
+        e.stopPropagation();
+    }, { passive: false });
+}
+
+document.addEventListener('click', e => {
+    if (Date.now() > diarySwipeSuppressClickUntil) return;
+    const li = e.target.closest && e.target.closest('#hole-list .hole-item');
+    if (li) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+    }
+}, true);
+
+function shiftFilteredCalendarDay(deltaDays) {
+    if (!activeCalendarDayFilter) return;
+    const parts = activeCalendarDayFilter.split('-').map(Number);
+    const dt = new Date(parts[0], parts[1] - 1, parts[2] + deltaDays);
+    const nd = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    filterByDate(nd);
+}
 
 function switchPage(page) {
     currentPage = page;
@@ -225,11 +299,21 @@ function switchPage(page) {
     document.getElementById('folders-btn').style.display = '';
     document.getElementById('folders-btn').title = page === 'tasks' ? 'Task categories' : 'Note tags';
 
-    if (page === 'diary') {
-        document.getElementById('status-text').innerText = 'All Notes';
-    } else {
+    if (page === 'tasks') {
         document.getElementById('status-text').innerText = 'All Tasks';
+        renderTaskList();
+    } else {
+        if (activeCalendarDayFilter) {
+            const d = activeCalendarDayFilter;
+            const filtered = getVisibleNotes().filter(n => n.fullDate === d);
+            document.getElementById('status-text').innerText = `Date ${d} · ${filtered.length}`;
+            renderList(filtered);
+        } else {
+            document.getElementById('status-text').innerText = 'All Notes';
+            renderList(getVisibleNotes());
+        }
     }
+    syncCalendarDayNavUi();
 }
 
 function goHome() {
@@ -677,10 +761,47 @@ function archiveCurrentNote() {
     showDetails(note);
 }
 
+function noteToDatetimeLocalValue(note) {
+    let fd = note.fullDate;
+    if (!fd || !/^\d{4}-\d{2}-\d{2}$/.test(String(fd))) {
+        const head = (note.displayTime || '').trim().split(/\s+/)[0];
+        fd = /^\d{4}-\d{2}-\d{2}$/.test(head) ? head : null;
+    }
+    if (!fd) {
+        const now = new Date();
+        fd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+    const parts = (note.displayTime || '').trim().split(/\s+/);
+    let hh = 12;
+    let mi = 0;
+    if (parts.length >= 2) {
+        const tm = parts[1].split(':');
+        hh = parseInt(tm[0], 10);
+        mi = parseInt(tm[1], 10) || 0;
+        if (Number.isNaN(hh)) hh = 12;
+    }
+    return `${fd}T${String(hh).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
+}
+
+function applyDatetimeLocalToNote(note, localStr) {
+    if (!localStr) return;
+    const d = new Date(localStr);
+    if (Number.isNaN(d.getTime())) return;
+    const y = d.getFullYear();
+    const mo = d.getMonth() + 1;
+    const day = d.getDate();
+    const h = d.getHours();
+    const mi = d.getMinutes();
+    note.fullDate = `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    note.displayTime = `${note.fullDate} ${h}:${String(mi).padStart(2, '0')}`;
+}
+
 function enterEditMode() {
     const note = holeNotes.find(n => n.id === currentEditingId);
     if (!note) return;
     document.getElementById('edit-textarea').value = note.text;
+    const dtEl = document.getElementById('edit-note-datetime');
+    if (dtEl) dtEl.value = noteToDatetimeLocalValue(note);
     currentEditingImages = Array.isArray(note.images) ? [...note.images] : [];
     renderEditImageList();
     document.getElementById('view-mode').style.display = 'none';
@@ -699,10 +820,19 @@ function saveEdit() {
     if (!note) return;
     note.text = document.getElementById('edit-textarea').value.trim();
     note.images = [...currentEditingImages];
+    const dtEl = document.getElementById('edit-note-datetime');
+    if (dtEl && dtEl.value) {
+        applyDatetimeLocalToNote(note, dtEl.value);
+    }
     saveToStorage();
     document.getElementById('modal-text').innerText = note.text;
+    document.getElementById('modal-time').innerText = note.displayTime;
     cancelEdit();
-    showAll();
+    if (activeCalendarDayFilter) {
+        filterByDate(activeCalendarDayFilter);
+    } else {
+        showAll();
+    }
 }
 
 function renderEditImageList() {
@@ -761,6 +891,7 @@ function toggleSearch() {
 function handleSearch(query) {
     const q = query.trim().toLowerCase();
     if (!q) { showAll(); return; }
+    clearCalendarDayFilter();
     const filtered = getVisibleNotes().filter(n => (n.text && n.text.toLowerCase().includes(q)) || (n.displayTime && n.displayTime.includes(q)));
     document.getElementById('status-text').innerText = `Search "${query}" · ${filtered.length}`;
     renderList(filtered);
@@ -863,6 +994,7 @@ function renderFolders(target = 'note') {
 }
 
 function filterByTag(tag) {
+    clearCalendarDayFilter();
     const filtered = getNotesByTag(tag);
     document.getElementById('status-text').innerText = `Tag ${tag.name} · ${filtered.length}`;
     renderList(filtered);
@@ -960,6 +1092,7 @@ function toggleCalendar() {
 }
 
 function goToCard(index, animate = true) {
+    const prevIndex = currentCardIndex;
     currentCardIndex = Math.max(0, Math.min(index, DECK_CARD_COUNT - 1));
     const track = document.getElementById('deck-track');
     if (track) {
@@ -974,7 +1107,8 @@ function goToCard(index, animate = true) {
 
     // Render only the active card when needed.
     if (currentCardIndex === 1) renderOnThisDayView();
-    if (currentCardIndex === 2) resetRandomNoteDisplay();
+    // Only reset random card when entering this deck tab from another (not on click snap-back while staying on card 2).
+    if (currentCardIndex === 2 && prevIndex !== 2) resetRandomNoteDisplay();
     if (currentCardIndex === 3) renderStats();
 }
 
@@ -994,7 +1128,7 @@ function initDeckSwipe() {
     let startedOnInteractive = false;
 
     const getViewportWidth = () => track.parentElement?.clientWidth || surface.clientWidth || 0;
-    const isInteractiveTarget = target => !!target?.closest?.('button, input, textarea, select, label, a');
+    const isInteractiveTarget = target => !!target?.closest?.('button, input, textarea, select, label, a, .random-card-interactive');
     const isAtBoundary = deltaX =>
         (currentCardIndex === 0 && deltaX > 0) ||
         (currentCardIndex === DECK_CARD_COUNT - 1 && deltaX < 0);
@@ -1137,6 +1271,11 @@ function changeMonth(s) { currentViewDate.setMonth(currentViewDate.getMonth() + 
 // ===== Random Memory =====
 let lastRandomId = null;
 
+function getNotesEligibleForRandomDraw() {
+    const archiveTag = getArchiveTag();
+    return getVisibleNotes().filter(n => n.tagId !== archiveTag.id);
+}
+
 function resetRandomNoteDisplay() {
     const display = document.getElementById('random-note-display');
     const drawBtn = document.getElementById('random-draw-btn');
@@ -1155,8 +1294,12 @@ function drawRandomNote(showEmpty = true) {
     const drawBtn = document.getElementById('random-draw-btn');
     if (!display) return;
 
-    const visibleNotes = getVisibleNotes();
-    const pool = visibleNotes.filter(n => n.id !== lastRandomId);
+    const visibleNotes = getNotesEligibleForRandomDraw();
+    let pool = visibleNotes.filter(n => n.id !== lastRandomId);
+    if (pool.length === 0 && visibleNotes.length > 0) {
+        lastRandomId = null;
+        pool = visibleNotes.slice();
+    }
     if (pool.length === 0 && visibleNotes.length === 0) {
         if (drawBtn) drawBtn.innerText = 'Draw';
         display.innerHTML = `<div class="random-empty"><div style="font-size:32px;margin-bottom:10px">🌱</div><p>No notes yet<br>Write something first</p></div>`;
@@ -1177,7 +1320,7 @@ function drawRandomNote(showEmpty = true) {
         : '';
 
     display.innerHTML = `
-        <div class="random-card" onclick="openRandomNote(${note.id})">
+        <div class="random-card random-card-interactive" tabindex="0" role="button" aria-label="Open this note">
             ${hasImg ? `
                 <div class="random-card-media">
                     <img src="${note.images[0]}" class="random-card-img" alt="random-note-image">
@@ -1193,12 +1336,57 @@ function drawRandomNote(showEmpty = true) {
                 </div>
             </div>
         </div>`;
+    bindRandomCardTap(display.querySelector('.random-card-interactive'), note.id);
+}
+
+function bindRandomCardTap(el, noteId) {
+    if (!el) return;
+    let x0 = 0;
+    let y0 = 0;
+    let activePointerId = null;
+
+    el.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        x0 = e.clientX;
+        y0 = e.clientY;
+        activePointerId = e.pointerId;
+        try {
+            el.setPointerCapture(e.pointerId);
+        } catch (_) { /* ignore */ }
+    });
+
+    el.addEventListener('pointerup', e => {
+        if (activePointerId !== null && e.pointerId !== activePointerId) return;
+        try {
+            el.releasePointerCapture(e.pointerId);
+        } catch (_) { /* ignore */ }
+        activePointerId = null;
+        const dx = e.clientX - x0;
+        const dy = e.clientY - y0;
+        if (Math.hypot(dx, dy) > 14) return;
+        openRandomNote(noteId);
+    });
+
+    el.addEventListener('pointercancel', () => {
+        activePointerId = null;
+    });
+
+    el.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+    });
+
+    el.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openRandomNote(noteId);
+        }
+    });
 }
 
 function openRandomNote(noteId) {
     const note = holeNotes.find(n => n.id === noteId);
     if (!note) return;
-    hideModal('calendar-modal');
     showDetails(note);
 }
 
@@ -1476,14 +1664,11 @@ function renderOnThisDayView() {
 }
 
 function filterByDate(d) {
+    activeCalendarDayFilter = d;
+    syncCalendarDayNavUi();
     const filtered = getVisibleNotes().filter(n => n.fullDate === d);
     document.getElementById('status-text').innerText = `Date ${d} · ${filtered.length}`;
     renderList(filtered);
-}
-
-function showAll() {
-    document.getElementById('status-text').innerText = 'All Notes';
-    renderList(getVisibleNotes());
 }
 
 // ===== Settings =====
@@ -1733,6 +1918,7 @@ function showAll() {
         document.getElementById('status-text').innerText = 'All Tasks';
         renderTaskList();
     } else {
+        clearCalendarDayFilter();
         document.getElementById('status-text').innerText = 'All Notes';
         renderList(getVisibleNotes());
     }

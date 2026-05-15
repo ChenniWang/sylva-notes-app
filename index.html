@@ -14,7 +14,11 @@
     <div class="header">
         <div class="header-left">
             <h1 id="app-title" onclick="goHome()" style="cursor:pointer">🌳 Sylva</h1>
-            <p id="status-text">All Notes</p>
+            <div class="header-status-row">
+                <button type="button" id="calendar-day-prev" class="calendar-day-step-btn" onclick="shiftFilteredCalendarDay(-1)" title="Previous day" aria-label="Previous day" style="display:none">‹</button>
+                <p id="status-text">All Notes</p>
+                <button type="button" id="calendar-day-next" class="calendar-day-step-btn" onclick="shiftFilteredCalendarDay(1)" title="Next day" aria-label="Next day" style="display:none">›</button>
+            </div>
         </div>
         <div class="header-actions">
             <button class="icon-btn" id="search-toggle-btn" onclick="toggleSearch()" title="Search">
@@ -182,6 +186,10 @@
             </div>
             <div id="edit-mode" style="display:none">
                 <textarea id="edit-textarea"></textarea>
+                <div class="edit-datetime-row">
+                    <label class="edit-datetime-label" for="edit-note-datetime">Date & time</label>
+                    <input type="datetime-local" id="edit-note-datetime" class="edit-datetime-input">
+                </div>
                 <div id="edit-image-sorter" class="edit-image-sorter" style="display:none">
                     <div class="edit-image-sorter-head">
                         <span>Image Order</span>
@@ -257,10 +265,11 @@
 
 <div id="settings-modal" class="modal" onclick="toggleSettings()">
     <div class="settings-card" onclick="event.stopPropagation()">
-        <div class="folders-header">
+        <div class="folders-header settings-modal-sticky-header">
             <span>Settings</span>
             <button class="close-btn close-button" onclick="toggleSettings()">✕</button>
         </div>
+        <div class="settings-body-scroll">
         <div class="settings-row">
             <div class="settings-label"><span class="settings-icon">🌙</span><span>Dark mode</span></div>
             <label class="toggle-switch">
@@ -346,6 +355,7 @@
             </div>
             <input type="file" id="import-json-input" accept=".json,application/json" style="display:none" onchange="handleImportFile(this)">
             <p class="storage-note" id="storage-note-main">Data is saved in this browser. With Supabase sign-in, a copy is also stored in your cloud account so other devices can load the same notes. Clearing this browser can still remove the local copy—keep backups or stay signed in on another device. Images can be large; export .json backups regularly.</p>
+        </div>
         </div>
     </div>
 </div>
