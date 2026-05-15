@@ -1,2 +1,1 @@
-# Local Supabase credentials (never commit real keys)
-supabase-config.js
+# Optional: add patterns here if you fork Sylva and use untracked local overrides.
