@@ -4,7 +4,7 @@ Sylva is a browser-based notes & tasks website built with HTML, CSS, and vanilla
 
 Instead of focusing only on basic note-taking, I wanted the app to feel a little more personal, so I added features like calendar browsing, random memory resurfacing, and an “on this day” view, where users can look back on diary entries from the same date in previous years.
 
-Because everything runs on the user side, Sylva does not require an account, a database, or a backend server. It can be opened directly in the browser and stores data locally using `localStorage`.
+By default everything runs on the user side: you can open the app directly in the browser and it stores data locally using `localStorage`. **Optional:** you can connect a [Supabase](https://supabase.com/) project (see `supabase/schema.sql`). Copy `supabase-config.example.js` to `supabase-config.js` and add your URL and anon key (the latter file is gitignored).
 
 # [Demo]
 https://chenniwang.github.io/sylva-notes-app/

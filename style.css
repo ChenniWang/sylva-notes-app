@@ -1227,6 +1227,84 @@ input:checked + .toggle-slider::before { transform: translateX(20px); }
     color: var(--text-muted);
 }
 
+.cloud-sync-hint {
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--text-sub);
+    margin-bottom: 12px;
+}
+
+.cloud-code {
+    font-size: 11px;
+    background: var(--accent-light);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--accent);
+}
+
+.cloud-banner {
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    border: 1.5px solid var(--border);
+}
+
+.cloud-banner-warn {
+    border-color: #d4a84a;
+    background: rgba(212, 168, 74, 0.12);
+    color: var(--text-main);
+}
+
+.cloud-input {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--text-main);
+    font-size: 14px;
+    font-family: var(--font-body);
+}
+
+.cloud-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.cloud-auth-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.cloud-auth-btn {
+    flex: 1;
+    text-align: center;
+}
+
+.cloud-email-label {
+    font-size: 13px;
+    color: var(--text-main);
+    margin-bottom: 10px;
+    word-break: break-all;
+}
+
+.cloud-sync-status {
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    min-height: 1.2em;
+}
+
+.cloud-sync-status.cloud-sync-error {
+    color: #c45c5c;
+}
+
 .guide-card {
     background: var(--surface);
     width: 90%;

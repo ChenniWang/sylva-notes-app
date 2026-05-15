@@ -76,6 +76,9 @@ function updateTagModalLabels(target = 'note') {
 let currentEditingImages = [];
 let hasDrawnRandomNote = false;
 
+let sylvaSupabase = null;
+let cloudSaveTimer = null;
+
 const ARCHIVE_TAG_NAME = 'Archive';
 const ARCHIVE_TAG_COLOR = '#7a9e8e';
 
@@ -179,18 +182,21 @@ function bindInputShortcuts() {
 }
 
 window.onload = () => {
-    applySettings(appSettings);
-    ensureArchiveTag();
-    renderList(getVisibleNotes());
-    renderTaskList();
-    renderColorSwatches();
-    renderThemePresets();
-    renderFontOptions();
-    applyDisplayPref(appSettings.display);
-    bindInputShortcuts();
-    if (!appSettings.guideSeen) {
-        setTimeout(() => openGuideModal(), 220);
-    }
+    (async () => {
+        await initSylvaCloud();
+        applySettings(appSettings);
+        ensureArchiveTag();
+        renderList(getVisibleNotes());
+        renderTaskList();
+        renderColorSwatches();
+        renderThemePresets();
+        renderFontOptions();
+        applyDisplayPref(appSettings.display);
+        bindInputShortcuts();
+        if (!appSettings.guideSeen) {
+            setTimeout(() => openGuideModal(), 220);
+        }
+    })();
 };
 
 bindInputShortcuts();
@@ -295,7 +301,7 @@ function deleteCurrentTask() {
     }
 }
 
-function saveToStorage() {
+function saveToLocalStorageOnly() {
     try {
         ensureArchiveTag();
         localStorage.setItem('myHoleNotes', JSON.stringify(holeNotes));
@@ -306,6 +312,13 @@ function saveToStorage() {
         localStorage.setItem('mySettings',  JSON.stringify(appSettings));
     } catch(e) {
         alert('Local storage may be full, especially when there are many images. Consider exporting a .json backup before deleting some images or notes.');
+    }
+}
+
+function saveToStorage(options = {}) {
+    saveToLocalStorageOnly();
+    if (!options.skipCloud) {
+        scheduleSupabaseUpload();
     }
 }
 
@@ -1723,4 +1736,255 @@ function showAll() {
         document.getElementById('status-text').innerText = 'All Notes';
         renderList(getVisibleNotes());
     }
+}
+
+// ----- Supabase (optional multi-device sync) -----
+const SYLVA_USER_DATA_TABLE = 'user_data';
+
+function getSylvaSupabaseConfig() {
+    const c = typeof window !== 'undefined' ? window.SYLVA_SUPABASE : null;
+    if (!c || !c.url || !c.anonKey) return null;
+    if (String(c.url).includes('YOUR-PROJECT') || String(c.anonKey).includes('YOUR-ANON')) return null;
+    return c;
+}
+
+function setCloudSyncStatus(message, isError = false) {
+    const el = document.getElementById('cloud-sync-status');
+    if (!el) return;
+    el.textContent = message || '';
+    el.classList.toggle('cloud-sync-error', !!isError);
+}
+
+function refreshAppFromLoadedState() {
+    ensureArchiveTag();
+    applySettings(appSettings);
+    renderList(getVisibleNotes());
+    renderTaskList();
+    renderColorSwatches();
+    renderThemePresets();
+    renderFontOptions();
+    applyDisplayPref(appSettings.display);
+}
+
+function isCloudRowEmpty(row) {
+    const n = Array.isArray(row.hole_notes) ? row.hole_notes.length : 0;
+    const t = Array.isArray(row.user_tasks) ? row.user_tasks.length : 0;
+    return n === 0 && t === 0;
+}
+
+function applyCloudRowToApp(row) {
+    holeNotes = Array.isArray(row.hole_notes) ? row.hole_notes : [];
+    userTasks = Array.isArray(row.user_tasks) ? row.user_tasks : [];
+    noteTags = Array.isArray(row.note_tags) ? row.note_tags : [];
+    taskTags = Array.isArray(row.task_tags) ? row.task_tags : [];
+    appSettings = normalizeSettings({
+        ...appSettings,
+        ...(row.app_settings && typeof row.app_settings === 'object' ? row.app_settings : {})
+    });
+}
+
+function scheduleSupabaseUpload() {
+    const cfg = getSylvaSupabaseConfig();
+    if (!cfg || !sylvaSupabase) return;
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(() => {
+        uploadFullStateToSupabase().catch(err => {
+            console.error('Supabase upload', err);
+            setCloudSyncStatus('Cloud save failed: ' + (err && err.message ? err.message : String(err)), true);
+        });
+    }, 900);
+}
+
+async function uploadFullStateToSupabase() {
+    if (!sylvaSupabase) return;
+    const { data: { session } } = await sylvaSupabase.auth.getSession();
+    if (!session) return;
+
+    const payload = {
+        user_id: session.user.id,
+        hole_notes: holeNotes,
+        user_tasks: userTasks,
+        note_tags: noteTags,
+        task_tags: taskTags,
+        app_settings: appSettings,
+        updated_at: new Date().toISOString()
+    };
+
+    const { error } = await sylvaSupabase
+        .from(SYLVA_USER_DATA_TABLE)
+        .upsert(payload, { onConflict: 'user_id' });
+
+    if (error) throw error;
+    setCloudSyncStatus('Saved to cloud.');
+}
+
+async function pullCloudStateForSession(session) {
+    if (!sylvaSupabase || !session) return;
+
+    const { data, error } = await sylvaSupabase
+        .from(SYLVA_USER_DATA_TABLE)
+        .select('*')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+    if (error) {
+        console.error(error);
+        setCloudSyncStatus(error.message, true);
+        return;
+    }
+
+    const localHasContent = holeNotes.length > 0 || userTasks.length > 0;
+
+    if (!data) {
+        await uploadFullStateToSupabase();
+        setCloudSyncStatus('First sign-in: uploaded data from this device.');
+        return;
+    }
+
+    if (isCloudRowEmpty(data) && localHasContent) {
+        await uploadFullStateToSupabase();
+        setCloudSyncStatus('Cloud was empty; uploaded data from this device.');
+        return;
+    }
+
+    if (!isCloudRowEmpty(data)) {
+        applyCloudRowToApp(data);
+        saveToStorage({ skipCloud: true });
+        refreshAppFromLoadedState();
+        setCloudSyncStatus('Loaded from cloud.');
+        return;
+    }
+
+    applyCloudRowToApp(data);
+    saveToStorage({ skipCloud: true });
+    refreshAppFromLoadedState();
+    setCloudSyncStatus('Signed in. No notes in cloud yet.');
+}
+
+function updateCloudAuthUi(session) {
+    const cfg = getSylvaSupabaseConfig();
+    const missingEl = document.getElementById('cloud-config-missing');
+    const outEl = document.getElementById('cloud-signed-out');
+    const inEl = document.getElementById('cloud-signed-in');
+    const labelEl = document.getElementById('cloud-email-label');
+
+    if (missingEl) missingEl.style.display = !cfg ? 'block' : 'none';
+    if (!outEl || !inEl) return;
+
+    if (!cfg) {
+        outEl.style.display = 'none';
+        inEl.style.display = 'none';
+        return;
+    }
+
+    if (session && session.user) {
+        outEl.style.display = 'none';
+        inEl.style.display = 'block';
+        if (labelEl) labelEl.textContent = 'Signed in as ' + (session.user.email || session.user.id);
+    } else {
+        outEl.style.display = 'block';
+        inEl.style.display = 'none';
+    }
+}
+
+async function initSylvaCloud() {
+    const cfg = getSylvaSupabaseConfig();
+
+    if (!cfg) {
+        sylvaSupabase = null;
+        updateCloudAuthUi(null);
+        return;
+    }
+
+    const lib = typeof window !== 'undefined' ? window.supabase : null;
+    if (!lib || typeof lib.createClient !== 'function') {
+        setCloudSyncStatus('Supabase script failed to load. Check your network.', true);
+        sylvaSupabase = null;
+        return;
+    }
+
+    sylvaSupabase = lib.createClient(cfg.url, cfg.anonKey, {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+        }
+    });
+
+    const { data: { session } } = await sylvaSupabase.auth.getSession();
+    updateCloudAuthUi(session);
+
+    if (session) {
+        await pullCloudStateForSession(session);
+    }
+
+    sylvaSupabase.auth.onAuthStateChange(async (event, nextSession) => {
+        updateCloudAuthUi(nextSession);
+        if (event === 'SIGNED_IN' && nextSession) {
+            setCloudSyncStatus('Signed in. Syncing…');
+            await pullCloudStateForSession(nextSession);
+            refreshAppFromLoadedState();
+        }
+        if (event === 'SIGNED_OUT') {
+            setCloudSyncStatus('Signed out. This browser keeps its local copy.');
+        }
+    });
+}
+
+async function cloudSignIn() {
+    const cfg = getSylvaSupabaseConfig();
+    if (!cfg || !sylvaSupabase) {
+        alert('Configure supabase-config.js with your project URL and anon key first.');
+        return;
+    }
+    const email = (document.getElementById('cloud-email') || {}).value || '';
+    const password = (document.getElementById('cloud-password') || {}).value || '';
+    if (!email.trim() || !password) {
+        alert('Enter email and password.');
+        return;
+    }
+    setCloudSyncStatus('Signing in…');
+    const { error } = await sylvaSupabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (error) {
+        setCloudSyncStatus(error.message, true);
+        return;
+    }
+    setCloudSyncStatus('Signed in.');
+}
+
+async function cloudSignUp() {
+    const cfg = getSylvaSupabaseConfig();
+    if (!cfg || !sylvaSupabase) {
+        alert('Configure supabase-config.js with your project URL and anon key first.');
+        return;
+    }
+    const email = (document.getElementById('cloud-email') || {}).value || '';
+    const password = (document.getElementById('cloud-password') || {}).value || '';
+    if (!email.trim() || !password) {
+        alert('Enter email and password.');
+        return;
+    }
+    if (password.length < 6) {
+        alert('Password must be at least 6 characters (Supabase default).');
+        return;
+    }
+    setCloudSyncStatus('Creating account…');
+    const redirectTo = typeof location !== 'undefined' ? `${location.origin}${location.pathname}` : undefined;
+    const { error } = await sylvaSupabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: redirectTo ? { emailRedirectTo: redirectTo } : undefined
+    });
+    if (error) {
+        setCloudSyncStatus(error.message, true);
+        return;
+    }
+    setCloudSyncStatus('Check your email if confirmation is required, or you may already be signed in.');
+}
+
+async function cloudSignOut() {
+    if (!sylvaSupabase) return;
+    setCloudSyncStatus('Signing out…');
+    const { error } = await sylvaSupabase.auth.signOut();
+    if (error) setCloudSyncStatus(error.message, true);
 }

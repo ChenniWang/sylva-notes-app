@@ -299,6 +299,29 @@
                 <button class="display-opt" data-val="tasks" onclick="setDisplayPref('tasks')">Tasks Only</button>
             </div>
         </div>
+        <div class="settings-section" id="cloud-sync-section">
+            <p class="settings-section-title">Cloud sync (Supabase)</p>
+            <p class="cloud-sync-hint">Sign in with the same account on each device to sync notes and tasks. Configure <code class="cloud-code">supabase-config.js</code> first.</p>
+            <div id="cloud-config-missing" class="cloud-banner cloud-banner-warn" style="display:none">
+                Add your Supabase URL and anon key in <code class="cloud-code">supabase-config.js</code>, then reload the page.
+            </div>
+            <div id="cloud-signed-out">
+                <input type="email" id="cloud-email" class="cloud-input" placeholder="Email" autocomplete="username">
+                <input type="password" id="cloud-password" class="cloud-input" placeholder="Password (min 6 characters)" autocomplete="current-password">
+                <div class="cloud-auth-actions">
+                    <button type="button" class="display-opt cloud-auth-btn" onclick="cloudSignIn()">Sign in</button>
+                    <button type="button" class="display-opt cloud-auth-btn" onclick="cloudSignUp()">Create account</button>
+                </div>
+            </div>
+            <div id="cloud-signed-in" style="display:none">
+                <p id="cloud-email-label" class="cloud-email-label"></p>
+                <button type="button" class="export-btn" onclick="cloudSignOut()">
+                    <span class="export-icon">🚪</span>
+                    <div><span class="export-label">Sign out</span><span class="export-sub">Stop syncing; data stays in this browser</span></div>
+                </button>
+            </div>
+            <p id="cloud-sync-status" class="cloud-sync-status" aria-live="polite"></p>
+        </div>
         <div class="settings-section">
             <p class="settings-section-title">Export data</p>
             <div class="export-btns">
@@ -322,7 +345,7 @@
                 </button>
             </div>
             <input type="file" id="import-json-input" accept=".json,application/json" style="display:none" onchange="handleImportFile(this)">
-            <p class="storage-note">Data is stored locally in this browser only. Clearing browser data, switching browsers, or changing devices may cause data loss. Images can use significant local space; export backups regularly.</p>
+            <p class="storage-note" id="storage-note-main">Data is saved in this browser. With Supabase sign-in, a copy is also stored in your cloud account so other devices can load the same notes. Clearing this browser can still remove the local copy—keep backups or stay signed in on another device. Images can be large; export .json backups regularly.</p>
         </div>
     </div>
 </div>
@@ -362,6 +385,8 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
