@@ -195,12 +195,14 @@
                     <label class="edit-datetime-label" for="edit-note-datetime">Date & time</label>
                     <input type="datetime-local" id="edit-note-datetime" class="edit-datetime-input">
                 </div>
-                <div id="edit-image-sorter" class="edit-image-sorter" style="display:none">
+                <div id="edit-image-sorter" class="edit-image-sorter">
                     <div class="edit-image-sorter-head">
-                        <span>Image Order</span>
-                        <span class="edit-image-sorter-sub">Use buttons to change image order</span>
+                        <span>Photos</span>
+                        <span class="edit-image-sorter-sub" id="edit-image-count-label">0 / 9</span>
                     </div>
                     <div id="edit-image-list" class="edit-image-list"></div>
+                    <input type="file" id="edit-image-input" accept="image/*" style="display:none" multiple onchange="handleEditImageSelect(this)">
+                    <button type="button" class="edit-image-add-btn" id="edit-image-add-btn" onclick="document.getElementById('edit-image-input').click()">+ Add photos</button>
                 </div>
                 <div class="edit-actions">
                     <button class="cancel-btn" onclick="cancelEdit()">Cancel</button>

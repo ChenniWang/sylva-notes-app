@@ -1122,6 +1122,51 @@ body.dark .archive-btn {
     cursor: default;
 }
 
+.edit-image-remove-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text-sub);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.edit-image-remove-btn:hover {
+    border-color: #d93025;
+    color: #d93025;
+    background: #fff0f0;
+}
+
+.edit-image-add-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--text-sub);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.edit-image-add-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-light);
+}
+
+.edit-image-add-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
 .task-modal-title-text { font-size: 16px; font-weight: 600; padding: 20px 20px 0; color: var(--text-main); font-family: var(--font-display); }
 .task-modal-note-text { font-size: 14px; padding: 10px 20px 0; color: var(--text-sub); white-space: pre-wrap; word-break: break-all; }
 

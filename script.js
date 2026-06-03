@@ -857,8 +857,7 @@ function saveEdit() {
         applyDatetimeLocalToNote(note, dtEl.value);
     }
     saveToStorage();
-    document.getElementById('modal-text').innerText = note.text;
-    document.getElementById('modal-time').innerText = note.displayTime;
+    refreshNoteDetailView(note);
     cancelEdit();
     if (activeCalendarDayFilter) {
         filterByDate(activeCalendarDayFilter);
@@ -867,19 +866,43 @@ function saveEdit() {
     }
 }
 
+function refreshNoteDetailView(note) {
+    if (!note) return;
+    document.getElementById('modal-text').innerText = note.text || '';
+    document.getElementById('modal-time').innerText = note.displayTime;
+    const container = document.getElementById('modal-image-container');
+    container.innerHTML = '';
+    if (note.images && note.images.length > 0) {
+        container.className = 'modal-image-grid';
+        note.images.forEach((src, index) => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.className = 'grid-img';
+            img.style.cursor = 'zoom-in';
+            img.onclick = e => { e.stopPropagation(); openImagePreview(note.images, index); };
+            container.appendChild(img);
+        });
+    } else {
+        container.className = '';
+    }
+}
+
 function renderEditImageList() {
     const sorter = document.getElementById('edit-image-sorter');
     const list = document.getElementById('edit-image-list');
+    const countLabel = document.getElementById('edit-image-count-label');
+    const addBtn = document.getElementById('edit-image-add-btn');
     if (!sorter || !list) return;
 
-    if (!currentEditingImages || currentEditingImages.length === 0) {
-        sorter.style.display = 'none';
-        list.innerHTML = '';
-        return;
+    const count = currentEditingImages ? currentEditingImages.length : 0;
+    if (countLabel) countLabel.textContent = `${count} / 9`;
+    if (addBtn) {
+        addBtn.disabled = count >= 9;
+        addBtn.textContent = count >= 9 ? 'Maximum 9 photos' : '+ Add photos';
     }
 
-    sorter.style.display = 'block';
     list.innerHTML = '';
+    if (count === 0) return;
 
     currentEditingImages.forEach((src, index) => {
         const item = document.createElement('div');
@@ -888,15 +911,50 @@ function renderEditImageList() {
             <img class="edit-image-thumb" src="${src}" alt="image-${index + 1}">
             <div class="edit-image-meta">
                 <div class="edit-image-index">Image ${index + 1}</div>
-                <div class="edit-image-name">Adjust the display order</div>
+                <div class="edit-image-name">Reorder or remove</div>
             </div>
             <div class="edit-image-actions">
-                <button class="edit-image-move-btn" type="button" ${index === 0 ? 'disabled' : ''} onclick="moveEditImage(${index}, -1)">←</button>
-                <button class="edit-image-move-btn" type="button" ${index === currentEditingImages.length - 1 ? 'disabled' : ''} onclick="moveEditImage(${index}, 1)">→</button>
+                <button class="edit-image-move-btn" type="button" ${index === 0 ? 'disabled' : ''} onclick="moveEditImage(${index}, -1)" title="Move left">←</button>
+                <button class="edit-image-move-btn" type="button" ${index === currentEditingImages.length - 1 ? 'disabled' : ''} onclick="moveEditImage(${index}, 1)" title="Move right">→</button>
+                <button class="edit-image-remove-btn" type="button" onclick="removeEditImage(${index})" title="Remove">✕</button>
             </div>
         `;
         list.appendChild(item);
     });
+}
+
+function removeEditImage(index) {
+    if (index < 0 || index >= currentEditingImages.length) return;
+    currentEditingImages.splice(index, 1);
+    renderEditImageList();
+}
+
+async function handleEditImageSelect(input) {
+    const files = Array.from(input.files || []);
+    if (files.length === 0) return;
+
+    const remaining = 9 - currentEditingImages.length;
+    if (remaining <= 0) {
+        alert('Maximum 9 images per note.');
+        input.value = '';
+        return;
+    }
+
+    const addBtn = document.getElementById('edit-image-add-btn');
+    if (addBtn) {
+        addBtn.disabled = true;
+        addBtn.textContent = 'Loading...';
+    }
+
+    const toProcess = files.slice(0, remaining);
+    const results = await compressImagesFromFiles(toProcess);
+    currentEditingImages.push(...results);
+    input.value = '';
+    renderEditImageList();
+
+    if (files.length > remaining) {
+        alert(`Only ${remaining} more photo(s) could be added (max 9 per note).`);
+    }
 }
 
 function moveEditImage(index, direction) {
@@ -1905,17 +1963,13 @@ function openImagePreview(images, startIndex = 0) {
 }
 
 // ===== Image Upload =====
-async function handleImageSelect(input) {
-    const files = Array.from(input.files).slice(0, 9);
-    if (files.length === 0) return;
-    const btn = document.getElementById('add-image-btn');
-    btn.innerHTML = 'Loading...';
-
-    const results = await Promise.all(files.map(file => new Promise(resolve => {
+async function compressImagesFromFiles(files) {
+    return Promise.all(files.map(file => new Promise(resolve => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = e => {
-            const img = new Image(); img.src = e.target.result;
+            const img = new Image();
+            img.src = e.target.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 let w = img.width, h = img.height, max = 800;
@@ -1926,8 +1980,15 @@ async function handleImageSelect(input) {
             };
         };
     })));
+}
 
-    currentSelectedImages = results;
+async function handleImageSelect(input) {
+    const files = Array.from(input.files).slice(0, 9);
+    if (files.length === 0) return;
+    const btn = document.getElementById('add-image-btn');
+    btn.innerHTML = 'Loading...';
+
+    currentSelectedImages = await compressImagesFromFiles(files);
     btn.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
     btn.classList.add('has-image');
     input.value = '';
