@@ -113,6 +113,34 @@ function getVisibleNotes() {
     return holeNotes.filter(note => !note.archived);
 }
 
+function getNoteSortTime(note) {
+    if (!note) return 0;
+    let fd = note.fullDate;
+    if (!fd || !/^\d{4}-\d{2}-\d{2}$/.test(String(fd))) {
+        const head = (note.displayTime || '').trim().split(/\s+/)[0];
+        fd = /^\d{4}-\d{2}-\d{2}$/.test(head) ? head : '';
+    }
+    if (!fd) return note.id || 0;
+    const [y, mo, d] = fd.split('-').map(n => parseInt(n, 10));
+    const timeParts = (note.displayTime || '').trim().split(/\s+/);
+    let h = 0;
+    let mi = 0;
+    if (timeParts.length >= 2) {
+        const tm = timeParts[1].split(':');
+        h = parseInt(tm[0], 10) || 0;
+        mi = parseInt(tm[1], 10) || 0;
+    }
+    return new Date(y, mo - 1, d, h, mi).getTime();
+}
+
+function sortNotesByTime(notes) {
+    return notes.slice().sort((a, b) => getNoteSortTime(b) - getNoteSortTime(a));
+}
+
+function reorderHoleNotesByTime() {
+    holeNotes.sort((a, b) => getNoteSortTime(b) - getNoteSortTime(a));
+}
+
 function isArchiveTag(tag) {
     return !!tag && tag.name === ARCHIVE_TAG_NAME;
 }
@@ -186,6 +214,7 @@ window.onload = () => {
         await initSylvaCloud();
         applySettings(appSettings);
         ensureArchiveTag();
+        reorderHoleNotesByTime();
         renderList(getVisibleNotes());
         renderTaskList();
         renderColorSwatches();
@@ -252,8 +281,8 @@ function initDiaryDateSwipe() {
         const dx = t.clientX - sx;
         const dy = t.clientY - sy;
         if (Math.abs(dx) < MIN || Math.abs(dx) < Math.abs(dy) * RATIO) return;
-        if (dx > 0) shiftFilteredCalendarDay(1);
-        else shiftFilteredCalendarDay(-1);
+        if (dx > 0) shiftFilteredCalendarDay(-1);
+        else shiftFilteredCalendarDay(1);
         diarySwipeSuppressClickUntil = Date.now() + 450;
         e.preventDefault();
         e.stopPropagation();
@@ -388,6 +417,7 @@ function deleteCurrentTask() {
 function saveToLocalStorageOnly() {
     try {
         ensureArchiveTag();
+        reorderHoleNotesByTime();
         localStorage.setItem('myHoleNotes', JSON.stringify(holeNotes));
         localStorage.setItem('myTasks',     JSON.stringify(userTasks));
         localStorage.setItem('myNoteTags',  JSON.stringify(noteTags));
@@ -411,12 +441,14 @@ function renderList(data) {
     const list = document.getElementById('hole-list');
     list.innerHTML = '';
 
-    if (data.length === 0) {
+    const sorted = sortNotesByTime(data);
+
+    if (sorted.length === 0) {
         list.innerHTML = `<div class="empty-state"><div class="emoji">🌱</div><p>No notes yet<br>Write something and Sylva will save it for you</p></div>`;
         return;
     }
 
-    data.forEach(item => {
+    sorted.forEach(item => {
         const tag = findTagById(item.tagId, 'note');
         const li = document.createElement('li');
         li.className = 'hole-item';
